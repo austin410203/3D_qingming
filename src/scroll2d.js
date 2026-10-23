@@ -8,7 +8,7 @@ const TILE_VERT = `varying vec2 vUv; varying vec2 vStrip; uniform float uU0, uTW
   void main(){ vUv = uv; vStrip = vec2(uU0 + uv.x * uTW, (1.0 - uv.y) * ${STRIP_H.toFixed(1)});
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const TILE_FRAG = `
-  uniform sampler2D map, uMask; uniform float uTime, uTW, uLoaded; uniform vec2 uTexel;
+  uniform sampler2D map, uMask; uniform float uTime, uTW, uLoaded, uReveal; uniform vec2 uTexel;
   varying vec2 vUv; varying vec2 vStrip;
   float lum(vec3 c){ return dot(c, vec3(.299,.587,.114)); }
   void main(){
@@ -25,7 +25,14 @@ const TILE_FRAG = `
     // drifting glints along the ripple lines
     float g = sin(vStrip.x * 0.021 - t * 0.9 + sin(vStrip.y * 0.3) * 1.5) * sin(vStrip.y * 0.9 + t * 0.7);
     c += k * smoothstep(0.75, 1.0, g) * 0.05;
-    gl_FragColor = vec4(mix(vec3(0.89,0.83,0.68), c, uLoaded), 1.0);
+    c = mix(vec3(0.89,0.83,0.68), c, uLoaded);
+    // still-rolled part of the scroll (unrolls right -> left): wooden roller, then nothing
+    float d = vStrip.x - uReveal;
+    if (d < -34.0) discard;
+    if (d < 0.0) { float k = -d / 34.0; float sh = sqrt(max(0.0, 1.0 - (2.0*k-1.0)*(2.0*k-1.0)));
+      c = mix(vec3(0.36, 0.20, 0.12), vec3(0.78, 0.6, 0.38), sh * 0.8) * (0.55 + 0.45 * sh); }
+    else c *= 1.0 - 0.25 * exp(-d / 18.0);           // shadow cast by the roller
+    gl_FragColor = vec4(c, 1.0);
     #include <colorspace_fragment>
   }`;
 
@@ -36,6 +43,7 @@ export class Scroll2D {
     this.scene.background = new THREE.Color(0x3b2a1c);
     this.cam = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
     this.cu = STRIP_W - 900;          // view centre (strip px)
+    this.uReveal = { value: -1e9 };    // strip u left of which the scroll is still rolled up
     this.zoom = 1; this.zoomU = null; this.zoomV = 0.5;
     this.meta = null;
     this.tiles = [];
@@ -110,7 +118,7 @@ export class Scroll2D {
       const wpx = Math.min(tw, w - i * tw);
       const mat = new THREE.ShaderMaterial({
         uniforms: { map: { value: null }, uMask: { value: this.maskTex }, uTime: { value: 0 }, uU0: { value: i * tw },
-          uTW: { value: wpx }, uTexel: { value: new THREE.Vector2(1 / wpx, 1 / STRIP_H) }, uLoaded: { value: 0 } },
+          uTW: { value: wpx }, uTexel: { value: new THREE.Vector2(1 / wpx, 1 / STRIP_H) }, uLoaded: { value: 0 }, uReveal: this.uReveal },
         vertexShader: TILE_VERT, fragmentShader: TILE_FRAG });
       const m = new THREE.Mesh(new THREE.PlaneGeometry(wpx, STRIP_H), mat);
       m.position.set(i * tw + wpx / 2, -STRIP_H / 2, 0);
@@ -167,10 +175,11 @@ export class Scroll2D {
       t.mat.uniforms.uTime.value = this.time;
       if (t.state === 2 && t.fade < 1) { t.fade = Math.min(1, t.fade + dt * 2.5); t.mat.uniforms.uLoaded.value = t.fade; }
     }
-    if (crowd) crowd.write2D(this.walkers, u0, u1);
+    const ur = Math.max(u0, this.uReveal.value + 20);           // nothing walks on the still-rolled part
+    if (crowd) crowd.write2D(this.walkers, ur, u1);
     this.walkers.mat.uniforms.uTime.value = this.time;
-    this.updateBirds(dt, u0, u1);
-    if (this.boatLayer) this.updateBoats(dt, u0, u1);
+    this.updateBirds(dt, ur, u1);
+    if (this.boatLayer) this.updateBoats(dt, ur + 300, u1);
     this.view = { u0: cx - halfW, u1: cx + halfW };
   }
 

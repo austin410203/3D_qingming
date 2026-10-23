@@ -32,6 +32,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 #hud .name small { color: var(--cinnabar); font-size: 18px; }
 #chapter { font-size: 14px; letter-spacing: .2em; margin-top: 4px; opacity: .85; transition: opacity .5s; }
 
+#sound { position: fixed; right: 14px; top: 56px; z-index: 5; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--panel-line); background: var(--panel); color: var(--cinnabar); font-size: 14px; font-weight: 900; }
+#sound.off { color: #9a8a70; text-decoration: line-through; }
+#tip { position: fixed; z-index: 7; pointer-events: none; background: rgba(40, 28, 16, .78); color: #f3e6c8; font-size: 12px;
+  padding: 3px 8px; border-radius: 10px; letter-spacing: .1em; transform: translate(12px, -28px); white-space: nowrap; }
 #modes { position: fixed; right: 14px; top: 14px; z-index: 5; display: flex; gap: 6px; }
 #modes button { display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 6px; border: 1px solid var(--panel-line);
   background: var(--panel); border-radius: 18px; font-size: 13px; letter-spacing: .08em; backdrop-filter: blur(4px); }
@@ -63,6 +68,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @media (max-width: 720px) {
   #hud .name { font-size: 17px; }
   #chapter { font-size: 12px; }
+  #sound { top: 10px; right: 10px; }
   #modes { top: auto; bottom: calc(84px + var(--safe-b)); right: 10px; flex-direction: column; }
   #modes button { padding: 4px; }
   #modes button span { display: none; }

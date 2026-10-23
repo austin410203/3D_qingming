@@ -8,6 +8,7 @@ import { Scroll2D } from './scroll2d.js';
 import { World } from './world.js';
 import { PaintPost, Dissolve } from './post.js';
 import { GodCam, PovCam, WalkCam } from './cameras.js';
+import { Soundscape } from './audio.js';
 
 const $ = s => document.querySelector(s);
 const canvas = $('#c');
@@ -49,11 +50,15 @@ world.scene.add(people3D.mesh);
 const cam3 = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.15, 3000);
 const god = new GodCam(), pov = new PovCam(), walk = new WalkCam();
 const post = new PaintPost(renderer), dissolve = new Dissolve(renderer);
+const sound = new Soundscape();
+const birds3D = makeBirds3D(); world.scene.add(birds3D.layer.mesh);
+// unroll the scroll on arrival
+{ const e = scroll.extents(); scroll.uReveal.value = scroll.cu + e.halfW + 60; state.unroll = scroll.cu - e.halfW - 200; }
 setLoad(1, '展卷');
 drawMinimap();
 setTimeout(() => $('#intro').classList.add('gone'), 300);
 state.ready = true;
-window.__qm = { state, scroll, world, crowd, god, pov, walk, cam3, renderer, frame, setMode, post, people3D, U2X, V2Z, X2U, Z2V };
+window.__qm = { state, scroll, world, crowd, god, pov, walk, cam3, renderer, frame, setMode, post, people3D, sound, U2X, V2Z, X2U, Z2V };
 console.log(`[qm] buildings ${world.buildingCount}, agents ${crowd.agents.length}, trees ${world.treeList.length}`);
 
 // ---------------------------------------------------------------- dive (2D <-> 3D)
@@ -147,6 +152,9 @@ function findDry(x, z) {
 const ptrs = new Map();
 let drag = null, lastTap = 0;
 canvas.addEventListener('contextmenu', e => e.preventDefault());
+const unlock = () => { if (sound.on) sound.resume(); };
+addEventListener('pointerdown', unlock); addEventListener('keydown', unlock); addEventListener('wheel', unlock, { passive: true });
+$('#sound').addEventListener('click', e => { e.stopPropagation(); $('#sound').classList.toggle('off', !sound.toggle()); });
 canvas.addEventListener('pointerdown', e => {
   canvas.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now(), button: e.button });
@@ -207,10 +215,13 @@ function tap(x, y) {
     if (a) setMode('pov', { agent: a });
   }
 }
+const tip = $('#tip');
 function hover(e) {
-  if (state.mode !== 'god') { canvas.classList.remove('pick'); return; }
+  if (state.mode !== 'god' || isTouch) { canvas.classList.remove('pick'); tip.hidden = true; return; }
   const a = crowd.pick(project, e.clientX, e.clientY, 26);
   canvas.classList.toggle('pick', !!a);
+  tip.hidden = !a;
+  if (a) { tip.textContent = `${crowd.label(a)}・點我換成他的視角`; tip.style.left = `${e.clientX}px`; tip.style.top = `${e.clientY}px`; }
 }
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
@@ -236,6 +247,7 @@ addEventListener('keydown', e => {
   if (state.mode === 'scroll' && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { state.playing = false; updatePlay(); }
   if (state.mode === 'pov' && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) nextPerson();
   if (state.mode === 'god' && e.code === 'KeyP') setMode('pov');
+  if (e.code === 'KeyM') $('#sound').click();
   if ((state.mode === 'god' || state.mode === 'scroll') && e.code === 'KeyG') setMode('god');
   if (state.mode !== 'walk' && e.code === 'KeyW' && state.mode !== 'scroll') setMode('walk');
 });
@@ -304,6 +316,11 @@ function frame(dt) {
     }
   }
   const p = state.mode === 'scroll' ? state.p : 1;
+  if (state.unroll != null) {
+    const r = scroll.uReveal;
+    r.value -= dt * Math.max(500, (r.value - state.unroll) * 1.6);
+    if (r.value < state.unroll) { r.value = -1e9; state.unroll = null; }
+  }
   crowd.update(dt);
   // ---- 2D
   if (p < 0.8) {
@@ -326,6 +343,7 @@ function frame(dt) {
     crowd.write3D(people3D, rv.x, rv.z, cam3.position.x, cam3.position.z, near ? 260 : Math.max(220, cam3.position.y * 3.2));
     people3D.mat.uniforms.uTime.value = state.t;
     world.update(dt, state.t);
+    updateBirds3D(dt);
     cam3.near = near ? 0.15 : Math.max(0.5, cam3.position.y * 0.02); cam3.updateProjectionMatrix();
   }
   // ---- compose
@@ -336,6 +354,15 @@ function frame(dt) {
     post.render(world.scene, cam3, dissolve.b, state.t);
     dissolve.render((p - 0.3) / 0.5);
   }
+  // ---- sound: street murmur follows the crowd around the listener
+  if (sound.started) {
+    let near = 0;
+    if (p > 0.5) { const cx = cam3.position.x, cz = cam3.position.z, R = state.mode === 'god' ? 40 + god.dist * 0.5 : 25;
+      for (const a of crowd.agents) if (Math.abs(a.x - cx) < R && Math.abs(a.z - cz) < R) near++; near = Math.min(1, near / 40) * (state.mode === 'god' ? Math.max(0.2, 1 - god.dist / 300) : 1); }
+    else near = Math.min(1, scroll.walkers.count / 160) * 0.5;
+    const wet = p > 0.5 ? (world.isWater(cam3.position.x, cam3.position.z) ? 1 : 0.35) : 0.5;
+    sound.update(near, wet);
+  }
   // ---- hud
   const u = state.mode === 'scroll' && p < 0.5 ? scroll.cu : X2U(state.mode === 'god' ? god.tx : cam3.position.x);
   let ch = CHAPTERS[0]; for (const c of CHAPTERS) if (Math.abs(c.u - u) < Math.abs(ch.u - u)) ch = c;
@@ -345,6 +372,26 @@ function frame(dt) {
   if (W && Math.abs(mm.width - W * devicePixelRatio) > 2) drawMinimap();
   mv.style.left = `${5 + Math.max(0, view.u0) / STRIP_W * W}px`;
   mv.style.width = `${Math.max(4, (Math.min(STRIP_W, view.u1) - Math.max(0, view.u0)) / STRIP_W * W)}px`;
+}
+// ink birds wheeling over the 3D city
+function makeBirds3D() {
+  const atlas = scroll.birds.atlas, layer = new SpriteLayer(atlas, 60, { alphaCut: 0.4 });
+  layer.mesh.layers.set(1);
+  const flocks = [];
+  for (let f = 0; f < 6; f++) flocks.push({ ang: Math.random() * 6.28, r: 40 + Math.random() * 60, h: 28 + Math.random() * 25, sp: 0.08 + Math.random() * 0.06, n: 3 + Math.floor(Math.random() * 5), ph: Math.random() * 6 });
+  return { layer, flocks };
+}
+function updateBirds3D(dt) {
+  const L = birds3D.layer; let n = 0;
+  const cx = state.mode === 'god' ? god.tx : cam3.position.x, cz = state.mode === 'god' ? god.tz : cam3.position.z;
+  for (const f of birds3D.flocks) {
+    f.ang += f.sp * dt;
+    for (let k = 0; k < f.n; k++) {
+      const a = f.ang - k * 0.035, x = cx + Math.cos(a) * (f.r + (k % 3) * 3), z = cz + Math.sin(a) * (f.r + (k % 2) * 4);
+      L.set(n++, Math.sin(state.t * 8 + k + f.ph) > 0 ? 'up' : 'down', x, f.h + Math.sin(state.t + k) * 1.5, z, 1.4, 1.4, 1, 0, 0);
+    }
+  }
+  L.commit(n);
 }
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
