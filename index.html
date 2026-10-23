@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>清明上河圖・動</title>
+<meta name="description" content="會動的清明上河圖（清院本）——先看動態長卷，滾動滑鼠滾輪走進 3D 畫中世界，以上帝或畫中人物的視角漫遊。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23b0402c'/><text x='32' y='45' font-size='34' text-anchor='middle' fill='%23f3e6c8' font-family='serif'>清</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="intro">
+  <div class="seal">清明<br>上河</div>
+  <h1>清明上河圖<span>・動</span></h1>
+  <p class="sub">清院本　陳枚・孫祜・金昆・戴洪・程志道　合繪　乾隆元年（1736）</p>
+  <div class="bar"><i id="loadbar"></i></div>
+  <p id="loadtxt">展卷中…</p>
+</div>
+
+<header id="hud">
+  <div class="name">清明上河圖<small>・動</small></div>
+  <div id="chapter"></div>
+</header>
+
+<nav id="modes">
+  <button data-mode="scroll" class="on" title="平面畫卷（Esc）"><b>卷</b><span>畫卷</span></button>
+  <button data-mode="god" title="上帝視角（G）"><b>天</b><span>上帝視角</span></button>
+  <button data-mode="pov" title="人物視角（P）"><b>人</b><span>人物視角</span></button>
+  <button data-mode="walk" title="自由漫步（W）"><b>步</b><span>自由漫步</span></button>
+</nav>
+
+<div id="povcard" hidden>
+  <div class="who"></div>
+  <div class="row"><button id="povNext">換一個人</button><button id="povExit">回上帝視角</button></div>
+</div>
+
+<div id="hint"></div>
+
+<div id="minimap">
+  <canvas id="mm"></canvas>
+  <div id="mmview"></div>
+  <button id="play" title="自動展卷（空白鍵）">❚❚</button>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "atlas": "assets/sprites/figures",
+  "cell": 200,
+  "width": 2048,
+  "sheets": [
+    {"file": "raw/gemini/people1.jpg", "grid": [4, 4], "items": [
+      ["merchant", 1.75, -1, "walk"], ["porter", 1.8, 0, "walk"], ["scholar", 1.8, 0, "walk"], ["mother", 1.7, 0, "walk"],
+      ["monk", 1.75, 0, "walk"], ["farmer", 1.75, -1, "walk"], ["peddler", 1.95, 0, "walk"], ["servant", 1.7, 1, "walk"],
+      ["child", 1.05, 1, "walk"], ["elder", 1.85, -1, "walk"], ["official", 1.85, 0, "walk"], ["umbrella", 2.15, 0, "walk"],
+      ["water", 1.75, 0, "walk"], ["lady", 1.7, 0, "walk"], ["guard", 2.6, 0, "walk"], ["barrow", 1.6, 1, "walk"]]},
+    {"file": "raw/gemini/animals1.jpg", "grid": [4, 4], "items": [
+      ["rider", 2.4, 1, "ride"], ["donkeyrider", 2.1, 1, "ride"], ["oxcart", 1.6, 1, "cart"], ["camel", 2.3, 1, "ride"],
+      ["sedan", 1.9, 0, "walk"], ["packdonkey", 1.6, -1, "ride"], ["mulecart", 2.0, -1, "cart"], ["dog", 0.7, -1, "ride"],
+      ["goats", 0.9, 1, "ride"], ["pig", 0.8, 1, "ride"], ["buffalo", 1.5, -1, "ride"], ["handcart", 1.6, 0, "cart"],
+      ["chickens", 1.75, 0, "walk"], ["groom", 1.85, -1, "ride"], ["deer", 1.5, 1, "ride"], ["crane", 1.4, 1, "still"]]}
+  ]
+}
